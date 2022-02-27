@@ -5,28 +5,50 @@ Furthermore, the Docker image could be then be used as a base from which to do f
 
 These are notes towards that goal.  They are likely specific to being on a Mac and, specifically, to my configuration on that Mac.
 
+## Extracting the entire build envronment from the image on DockerHub
+The Docker image contains all the lobe and dependent software packages, sample training images that I used with Lobe, sample test images, the exported TensorFlow model from Lobe, and a python script that classifies an image.
+
+### Copy the entire development environment from the Docker image to the host
+```bash
+cd $( mktemp --directory /tmp/lobe.ai.XXXXXX ) &&
+docker run --rm -v "${PWD}":/output rwcitek/lobe.ai \
+  rsync -vaR --progress /lobe.ai/./dental/ /output/
+```
+
+Here's a docker command to run the python code that classifies a JPG image.  The classifier identifies an image as either toothpaste or dental floss.
+
+### to run the python code
+```bash
+docker run --rm -i rwcitek/lobe.ai python3 /lobe.ai/dental/code/dental.py
+```
+
+
+
+
+
+
+
+
 ```bash
 cd ~/Desktop/zzz/lobe.ai/dental.test
 
- URL=http://localhost:38101/v1/predict/f3f0b084-4800-49d4-bd92-1acfd264d68b
- URL=http://192.168.0.4:38101/v1/predict/9c035df1-737e-4d64-bbf8-7aba56ec1234
- find test -name '*.jpg' | sort |
+URL=http://localhost:38101/v1/predict/f3f0b084-4800-49d4-bd92-1acfd264d68b
+URL=http://192.168.0.4:38101/v1/predict/9c035df1-737e-4d64-bbf8-7aba56ec1234
+find test -name '*.jpg' | sort |
 while read img ; do
-echo == ${img}
-{ cat <<eof
+  echo == ${img}
+  { cat <<eof
 {
   "image": "$( base64 -i ${img} )"
 }
 eof
-} | curl -s -H "Content-Type: application/json" -X POST --data-binary @- ${URL}
-echo
-done
-
- |
+  } | curl -s -H "Content-Type: application/json" -X POST --data-binary @- ${URL}
+  echo
+done |
 tee prediction.yaml
 ```
 
-## python setup
+## Python setup
 
 ### launch container
 ```bash
@@ -58,7 +80,7 @@ eof
 ### create python script
 ```bash
 docker exec -i lobe /bin/bash <<'eof1'
-<<'eof' cat > /tmp/dental.py
+  <<'eof' cat > /tmp/dental.py
 from lobe import ImageModel
 
 model = ImageModel.load('/lobe/dental TensorFlow/')
@@ -75,8 +97,8 @@ for label, confidence in result.labels:
 
 eof
 
-# test script within container
-python3 /tmp/dental.py
+  # test script within container
+  python3 /tmp/dental.py
 eof1
 ```
 
@@ -86,7 +108,7 @@ docker container stop lobe
 ```
 
 
-### create lobe.ai image with images and code
+## Create a lobe.ai Docker image with images and code
 ```bash
 # Create the dental.py Python script
 <<'eof' cat > dental.py
